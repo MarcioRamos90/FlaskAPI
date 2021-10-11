@@ -5,6 +5,10 @@ from sqlalchemy.engine import Engine
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, jsonify
 import linked_list
+import hash_table
+import binary_search_tree
+
+import random
 
 # app
 app = Flask(__name__)
@@ -118,18 +122,64 @@ def delete_user(user_id):
 
 @app.route("/blog_post/<user_id>", methods=["POST"])
 def create_blog_post(user_id):
-  pass
+  data = request.get_json()
+
+  user = User.query.filter_by(id=user_id).first()
+  if not user:
+    return jsonify({"message": "user does not exists!"})
+
+  ht = hash_table.HashTable(20)
+
+  ht.add_key_value("title", data["title"])
+  ht.add_key_value("body", data["body"])
+  ht.add_key_value("date", datetime.now())
+  ht.add_key_value("user_id", user_id)
+
+  new_blog_post = BlogPost(
+    title=ht.get_value("title"),
+    body=ht.get_value("body"),
+    date=ht.get_value("date"),
+    user_id=ht.get_value("user_id"),
+  )
+
+  db.session.add(new_blog_post)
+  db.session.commit()
+
+  return jsonify({"message": "Post created!"})
 
 
-@app.route("/blog_post/<user_id>", methods=["GET"])
+
+@app.route("/blog_post/by_user/<user_id>", methods=["GET"])
 def get_all_blog_posts(user_id):
-  pass
+  blog_posts = BlogPost.query.filter_by(user_id=user_id).all()
+  print(blog_posts)
+  ll = linked_list.LinkedList()
+  for bp in blog_posts:
+    ll.insert_begining(bp)
+  return jsonify()
 
 
 @app.route("/blog_post/<blog_post_id>", methods=["GET"])
 def get_one_blog_post(blog_post_id):
-  pass
+  blog_posts = BlogPost.query.all()
+  random.shuffle(blog_posts)
+  bst = binary_search_tree.BinarySearchTree()
+  print(len(blog_posts))
+  for post in blog_posts:
+    bst.insert({
+      "id": post.id,
+      "title": post.title,
+      "body": post.body,
+      "date": post.date,
+      "user_id": post.user_id,
+    })
 
+  post = bst.search(blog_post_id)
+
+  if not post:
+    return jsonify({"message": "post not found!"})
+
+  return jsonify(post)
 
 @app.route("/blog_post/<blog_post_id>", methods=["DELETE"])
 def delete_blog_post(blog_post_id):
